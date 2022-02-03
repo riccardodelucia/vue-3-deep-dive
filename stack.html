@@ -1,0 +1,58 @@
+<script src="https://unpkg.com/vue@next"></script>
+
+<style>
+  .mt-4 {
+    margin: 10px;
+  }
+</style>
+
+<div id="app"></div>
+
+<script>
+  const { h, createApp } = Vue;
+
+  const Stack = {
+    render() {
+      const slot = this.$slots.default ? this.$slots.default() : [];
+      return h(
+        "div",
+        {
+          class: "stack",
+        },
+        slot.map((child) => {
+          return h("div", { class: `mt-${this.$props.size}` }, [child]);
+        })
+      );
+    },
+  };
+
+  const App = {
+    components: { Stack },
+    // the component declares a single slot with two direct children, each of which
+    // has to be encapsulated into a dedicated <div class="mt-4">
+    template: `<Stack size='4'>
+        <div>hello</div>
+        <Stack size='4'>
+            <div>hello</div>
+            <div>hello</div>
+        </Stack>
+    </Stack>`,
+  };
+
+  createApp(App).mount("#app");
+</script>
+
+<!-- expected output
+<div class="stack">
+  <div class="mt-4">
+    <div>hello</div>
+  </div>
+  <div class="mt-4">
+    <div class="stack">
+      <div class="mt-4">
+        <div>hello</div>
+      </div>
+    </div>
+  </div>
+</div>
+-->

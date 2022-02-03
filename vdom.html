@@ -1,0 +1,118 @@
+<script src="https://unpkg.com/vue@next"></script>
+<style>
+  .red {
+    color: red;
+  }
+  .green {
+    color: green;
+  }
+</style>
+<div id="app"></div>
+
+<script>
+  // simplified version of Vue's h function
+  function h(tag, props, children) {
+    return {
+      tag,
+      props,
+      children,
+    };
+  }
+
+  // simplified version of Vue's mount function
+  function mount(vnode, container) {
+    // we assign the real DOM element to the vDOM such that it can be then accessed easily within the patch function
+    const el = (vnode.el = document.createElement(vnode.tag));
+    // props
+    if (vnode.props) {
+      for (const key in vnode.props) {
+        const value = vnode.props[key];
+        el.setAttribute(key, value);
+      }
+    }
+    // children
+    if (vnode.children) {
+      if (typeof vnode.children === "string") {
+        el.textContent = vnode.children;
+      } else {
+        vnode.children.forEach((child) => {
+          mount(child, el);
+        });
+      }
+    }
+    container.appendChild(el);
+  }
+
+  // assuming render functions have been executed and created this vdom
+  const vdom1 = h("div", { class: "red" }, [h("span", null, "hello")]);
+
+  // mount takes the vdom and creates the corresponding DOM, appending it to #app
+  mount(vdom1, document.getElementById("app"));
+
+  function patch(n1, n2) {
+    // n1 -> current vDOM: vdom1
+    // n2 -> updated vDOM: vdom2
+
+    // 1) same node -> look for props changes
+    if (n1.tag === n2.tag) {
+      // updates the DOM element node in the new vDOM snapshot
+      const el = (n2.el = n1.el);
+      // change props which changed
+      const oldProps = n1.props || {};
+      const newProps = n2.props || {};
+      for (const key in newProps) {
+        const oldValue = oldProps[key];
+        const newValue = newProps[key];
+        if (newValue !== oldValue) {
+          el.setAttribute(key, newValue);
+        }
+      }
+      for (const key in oldProps) {
+        if (!key in newProps) {
+          el.removeAttribute(key);
+        }
+      }
+      // 2) same node -> look for children changes
+      const oldChildren = n1.children;
+      const newChildren = n2.children;
+      if (typeof newChildren === "string") {
+        if (typeof oldChildren === "string") {
+          if (newChildren !== oldChildren) {
+            el.textContent = newChildren;
+          }
+        } else {
+          el.textContent = newChildren;
+        }
+      } else {
+        // children are arrays, not plain strings
+        if (typeof oldChildren === "string") {
+          el.innerHtml = "";
+          newChildren.forEach((child) => {
+            mount(child, el);
+          });
+        } else {
+          // Note: this is a very simplified version wrt real Vue array diffing algorithm, which bases on :key for v-for directive
+          const commonLength = Math.min(oldChildren.length, newChildren.length);
+          for (let i = 0; i < commonLength; i++) {
+            patch(oldChildren[i], newChildren[i]);
+          }
+          if (newChildren.length > oldChildren.length) {
+            newChildren.slice(oldChildren.length).forEach((child) => {
+              mount(child, el);
+            });
+          } else if (newChildren.length < oldChildren.length) {
+            oldChildren.slice(newChildren.length).forEach((child) => {
+              el.removeChild(child.el);
+            });
+          }
+        }
+      }
+    } else {
+      // nothing can be patched, the content is completely different -> replace nodes...
+    }
+  }
+
+  const vdom2 = h("div", { class: "green" }, [h("span", null, "changed!")]);
+
+  patch(vdom1, vdom2);
+</script>
